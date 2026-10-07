@@ -130,7 +130,7 @@ export function DeleteButton({ user }: { user: { id: string; name: string } }) {
 - **Promise-Based & Event-Driven**: `await modal.open(data)` for async results or pass callbacks (`onScan`, `onSuccess`) directly in payloads.
 - **Zero Re-Render Overhead**: Split-context architecture guarantees callers of `useModal()` never re-render when modals open, close, or animate.
 - **Code-Splitting Ready**: Register modals with `React.lazy()` at app shells without importing modal components into caller files.
-- **Lightweight & Headless**: Zero external runtime dependencies (~1.3 kB min+gzip). Works with any styling solution (Tailwind, Radix, Shadcn, MUI).
+- **Lightweight & Zero-Dependency**: Zero external runtime dependencies (~1.3 kB min+gzip). Works with any styling solution (Tailwind, Radix, Shadcn, MUI).
 
 ---
 
