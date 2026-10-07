@@ -17,7 +17,7 @@
   "homepage": "https://github.com/sauravhathi/react-modal-registry#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/sauravhathi/react-modal-registry.git"
+    "url": "git+https://github.com/sauravhathi/react-modal-registry.git"
   },
   "bugs": {
     "url": "https://github.com/sauravhathi/react-modal-registry/issues"
