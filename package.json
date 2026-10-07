@@ -1,0 +1,58 @@
+{
+  "name": "react-modal-registry",
+  "version": "0.1.0",
+  "description": "Type-safe, headless modal registry and promise-based manager for React",
+  "keywords": [
+    "react",
+    "modal",
+    "modals",
+    "dialog",
+    "manager",
+    "registry",
+    "promise",
+    "headless",
+    "typescript"
+  ],
+  "author": "Saurav Hathi <https://github.com/sauravhathi>",
+  "homepage": "https://github.com/sauravhathi/react-modal-registry#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sauravhathi/react-modal-registry.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sauravhathi/react-modal-registry/issues"
+  },
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm run build"
+  },
+  "peerDependencies": {
+    "react": ">=19.0.0",
+    "react-dom": ">=19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "tsup": "^8.5.1",
+    "typescript": "^6.0.2"
+  }
+}
