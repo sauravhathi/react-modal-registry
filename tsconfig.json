@@ -11,5 +11,5 @@
     "noEmit": true,
     "incremental": false
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "test/**/*"]
 }

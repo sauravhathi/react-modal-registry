@@ -1,11 +1,21 @@
 # react-modal-registry
 
-> Type-safe, promise-based modal management and registration for React.
+> Type-safe, promise-based modal and dialog management for React.
 
 [![npm version](https://img.shields.io/npm/v/react-modal-registry?style=flat-square&color=black)](https://www.npmjs.com/package/react-modal-registry)
 [![license](https://img.shields.io/badge/license-MIT-black?style=flat-square)](./LICENSE)
 [![bundle size](https://img.shields.io/bundlephobia/minzip/react-modal-registry?style=flat-square&color=black)](https://bundlephobia.com/package/react-modal-registry)
 [![typescript](https://img.shields.io/badge/TypeScript-strict-black?style=flat-square)](https://www.typescriptlang.org/)
+
+Managing dialogs in React often leads to **modal sprawl**—scattering `useState(false)` flags, prop drilling, and duplicate dialog components across pages.
+
+`react-modal-registry` provides a single, type-safe registry to open and manage modals cleanly:
+
+- **Promise-Based Dialogs**: Open modals imperatively (`await modal.open()`) and await user responses inline without local boolean states.
+- **End-to-End Type Safety**: Autocomplete modal IDs, input payloads, and return values via TypeScript declaration merging.
+- **URL Deep-Linking**: Synchronize modal visibility with the URL hash (`#modal=<id>`) or query params with native browser Back button dismissal.
+- **Zero Re-Render Penalty**: Split-context architecture ensures caller components never re-render when modals open or close.
+- **Headless & UI Agnostic**: Works out of the box with shadcn/ui, Radix UI, Tailwind CSS, or native HTML `<dialog>`.
 
 ---
 
@@ -27,36 +37,34 @@ bun add react-modal-registry
 
 ### 1. Mount `ModalProvider`
 
-Wrap your application root or layout shell:
+Wrap your application root:
 
 ```tsx
 import { ModalProvider } from 'react-modal-registry'
 
-export function RootLayout({ children }: { children: React.ReactNode }) {
+export function App({ children }: { children: React.ReactNode }) {
   return <ModalProvider>{children}</ModalProvider>
 }
 ```
 
 ### 2. Declare Modal Types
 
-In an ambient declaration file (e.g., `env.d.ts` or `modals.d.ts`), augment `ModalDataMap` and `ModalResultMap`:
+Declare modal IDs, payloads, and return types via TypeScript module augmentation (e.g., `env.d.ts` or `modals.d.ts`):
 
 ```ts
 declare module 'react-modal-registry' {
-  interface ModalDataMap {
-    confirmDelete: { userId: string; name: string }
-    barcodeScanner: { onScan: (code: string) => void }
-  }
-
-  interface ModalResultMap {
-    confirmDelete: boolean
+  interface ModalRegistry {
+    confirmDelete: {
+      data: { name: string }
+      result: boolean
+    }
   }
 }
 ```
 
 ### 3. Create a Modal Component
 
-Write your modal as a standard React component using `ModalProps<TData, TResult>`:
+Use `ModalProps<TData, TResult>` for your component props:
 
 ```tsx
 import type { ModalProps } from 'react-modal-registry'
@@ -65,160 +73,176 @@ export function ConfirmDeleteModal({
   isOpen,
   data,
   close
-}: ModalProps<{ userId: string; name: string }, boolean>) {
+}: ModalProps<{ name: string }, boolean>) {
   if (!isOpen) return null
 
   return (
     <dialog open={isOpen}>
-      <h3>Delete {data.name}?</h3>
-      <button onClick={() => close(true)}>Confirm</button>
+      <p>Are you sure you want to delete {data.name}?</p>
+      <button onClick={() => close(true)}>Delete</button>
       <button onClick={() => close(false)}>Cancel</button>
     </dialog>
   )
 }
 ```
 
-### 4. Register Modals
+### 4. Register and Open
 
-Mount registrations at layout or router boundaries:
+Register modals at app root or feature level, and trigger them anywhere with `useModal`:
 
 ```tsx
-import { ModalRegistry } from 'react-modal-registry'
+import { ModalRegistry, useModal } from 'react-modal-registry'
 import { ConfirmDeleteModal } from './ConfirmDeleteModal'
 
-const appModals = [{ id: 'confirmDelete', component: ConfirmDeleteModal }] as const
+const modals = [{ id: 'confirmDelete', component: ConfirmDeleteModal }] as const
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function Layout({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <ModalRegistry modals={appModals} />
+      <ModalRegistry modals={modals} />
       {children}
     </>
   )
 }
-```
 
-### 5. Trigger Anywhere with `useModal`
-
-```tsx
-import { useModal } from 'react-modal-registry'
-
-export function DeleteButton({ user }: { user: { id: string; name: string } }) {
+export function DeleteButton({ itemName }: { itemName: string }) {
   const confirmModal = useModal('confirmDelete')
 
   const handleDelete = async () => {
-    // Typed payload and strictly typed return value (Promise<boolean>)
-    const confirmed = await confirmModal.open({
-      userId: user.id,
-      name: user.name
-    })
-
+    const confirmed = await confirmModal.open({ name: itemName })
     if (confirmed) {
-      deleteUser(user.id)
+      // item deleted
     }
   }
 
-  return <button onClick={handleDelete}>Delete User</button>
+  return <button onClick={handleDelete}>Delete</button>
 }
 ```
 
 ---
 
-## Features
+## Usage & Features
 
-- **End-to-End Type Safety**: IDE autocompletion for modal IDs, payloads, and return types via TypeScript declaration merging.
-- **Promise-Based & Event-Driven**: `await modal.open(data)` for async results or pass callbacks (`onScan`, `onSuccess`) directly in payloads.
-- **Zero Re-Render Overhead**: Split-context architecture guarantees callers of `useModal()` never re-render when modals open, close, or animate.
-- **Code-Splitting Ready**: Register modals with `React.lazy()` at app shells without importing modal components into caller files.
-- **Lightweight & Zero-Dependency**: Zero external runtime dependencies (~1.3 kB min+gzip). Works with any styling solution (Tailwind, Radix, Shadcn, MUI).
+### Promise-Based Responses
 
----
-
-## Why react-modal-registry?
-
-| Feature                      |                    `react-modal-registry`                     |   `@ebay/nice-modal-react`    |     `react-modal-promise`     |     `react-modal-hook`     |
-| :--------------------------- | :-----------------------------------------------------------: | :---------------------------: | :---------------------------: | :------------------------: |
-| **Type Safety**              | **Declaration merging** (autocompletes ID, payload, & return) |    String ID / loose types    |    Direct component import    |  Direct component import   |
-| **Caller Re-renders**        |              **None** (isolated split contexts)               | Re-renders on context updates | Re-renders with wrapper state | Re-renders on state toggle |
-| **Promise Returns**          |            **Strictly typed** (`Promise<TResult>`)            | Untyped (`Promise<unknown>`)  |        Manual generic         |       Not supported        |
-| **Code Splitting**           |       **Native** (`React.lazy()` at registration shell)       |    Requires HOC per modal     |       Bundled at caller       |     Bundled at caller      |
-| **Component Wrapper**        |               **None** (standard `ModalProps`)                | Requires `NiceModal.create()` |  Requires `create()` wrapper  |   Requires hook binding    |
-| **UI Agnostic**              |              Yes (Tailwind, Radix, Shadcn, MUI)               |              Yes              |              Yes              |   Tied to `react-modal`    |
-| **Bundle Size (min + gzip)** |                          **~1.3 kB**                          |            ~2.4 kB            |            ~1.6 kB            |          ~1.3 kB           |
-
----
-
-## Patterns
-
-### Local Component Registrations
-
-Register modals scoped to the lifetime of a specific feature or page with `useRegisterModal`. Registrations unmount automatically when the caller unmounts:
+`modal.open(data)` returns a `Promise<TResult | undefined>`. Calling `close(result)` resolves the promise:
 
 ```tsx
-import { useRegisterModal } from 'react-modal-registry'
-import { ReportModal } from './ReportModal'
-
-export function AnalyticsPage() {
-  useRegisterModal('customReport', ReportModal)
-
-  return <main>Analytics Dashboard</main>
+const confirmed = await modal.open({ name: 'Project Alpha' })
+if (confirmed) {
+  await api.deleteProject()
 }
 ```
 
-### Callback-Driven Workflows
+If the modal is dismissed without a value (e.g. backdrop click or ESC), the promise resolves to `undefined`.
 
-Pass event listeners or streams directly in modal payload data:
+### Rich Payloads & Callbacks
 
-```tsx
-function ScannerTrigger() {
-  const scanner = useModal('barcodeScanner')
+Pay-load data is passed in-memory, so you can pass callbacks, functions, or complex objects directly:
 
-  const handleScan = () => {
-    scanner.open({
-      onScan: code => console.log('Scanned:', code)
-    })
+```ts
+declare module 'react-modal-registry' {
+  interface ModalRegistry {
+    scanner: {
+      data: { onScan: (code: string) => void }
+    }
   }
-
-  return <button onClick={handleScan}>Scan Code</button>
 }
 ```
-
-### Reactive State Subscriptions
-
-`useModal(id).isOpen()` reads state imperatively without re-rendering the caller. Use `useIsModalOpen(id)` when you need reactive UI updates:
 
 ```tsx
-import { useIsModalOpen } from 'react-modal-registry'
+const scannerModal = useModal('scanner')
 
-function StatusIndicator() {
-  const isOpen = useIsModalOpen('confirmDelete')
-  return <span>{isOpen ? 'Active' : 'Idle'}</span>
+scannerModal.open({
+  onScan: code => {
+    console.log('Scanned:', code)
+  }
+})
+```
+
+### Component-Scoped Registrations
+
+Register modals that exist only while a specific component is mounted:
+
+```tsx
+import { useRegisterModal, useModal } from 'react-modal-registry'
+import { FeatureModal } from './FeatureModal'
+
+export function FeaturePage() {
+  useRegisterModal('featureDetails', FeatureModal)
+  const modal = useModal('featureDetails')
+
+  return <button onClick={() => modal.open()}>Open Details</button>
 }
 ```
+
+### Code Splitting with `React.lazy`
+
+Split modal components into separate chunks:
+
+```tsx
+import { lazy } from 'react'
+import { ModalRegistry } from 'react-modal-registry'
+
+const AnalyticsModal = lazy(() => import('./AnalyticsModal'))
+
+const modals = [{ id: 'analytics', component: AnalyticsModal }] as const
+
+export function App() {
+  return <ModalRegistry modals={modals} />
+}
+```
+
+### URL Deep Linking
+
+Optionally sync active modals with the browser URL (hash or query) and browser Back button:
+
+```tsx
+<ModalProvider
+  routing={{
+    strategy: 'hash', // 'hash' (#modal=changelog) or 'query' (?modal=changelog)
+    param: 'modal', // default: 'modal'
+    historyMode: 'push', // 'push' or 'replace'
+    defaultData: {
+      changelog: { version: '1.0.0' }
+    }
+  }}
+>
+  {children}
+</ModalProvider>
+```
+
+When routing is enabled:
+- Opening a modal syncs `#modal=<id>` to the URL.
+- Closing the modal cleans up the URL parameter.
+- Pressing the browser **Back** button dismisses the modal.
 
 ---
 
 ## API Reference
 
-| Export                            | Type      | Description                                                             |
-| :-------------------------------- | :-------- | :---------------------------------------------------------------------- |
-| `<ModalProvider>`                 | Component | Root provider managing modal lifecycle and rendering active slots.      |
-| `<ModalRegistry>`                 | Component | Declarative component registering a batch of modals at root boundaries. |
-| `useModal(id)`                    | Hook      | Returns typed imperative controls (`open`, `close`, `isOpen`).          |
-| `useIsModalOpen(id)`              | Hook      | Reactively subscribes to the open status of a specific modal ID.        |
-| `useRegisterModal(id, component)` | Hook      | Dynamically registers modals for the lifetime of the calling component. |
-| `useCloseAll()`                   | Hook      | Dismisses all currently open modals.                                    |
-| `ModalProps<TData, TResult>`      | Type      | Standard props received by registered modal components.                 |
-| `ModalDataMap`                    | Interface | Augmentation interface for payload types.                               |
-| `ModalResultMap`                  | Interface | Augmentation interface for return types.                                |
-| `ModalRegistry`                   | Interface | Unified augmentation interface for paired data and result types.        |
+| Export | Type | Description |
+| :--- | :--- | :--- |
+| `<ModalProvider>` | Component | Root provider managing modal state and slot rendering. Accepts `unmountDelay`, `fallback`, and `routing`. |
+| `<ModalRegistry>` | Component | Mounts a batch of static modal registrations: `<ModalRegistry modals={[...]} />`. |
+| `useModal(id)` | Hook | Returns imperative controls: `{ open(data?), close(result?), isOpen() }`. |
+| `useIsModalOpen(id)` | Hook | Reactively subscribes to whether a modal is currently open (`boolean`). |
+| `useRegisterModal(id, component)` | Hook | Dynamically registers a modal for the calling component's lifecycle. |
+| `useCloseAll()` | Hook | Dismisses all currently open modals. |
+| `ModalProps<TData, TResult>` | Interface | Props received by modal components: `{ isOpen, data, close }`. |
+| `ModalRegistry` | Interface | Target interface for module augmentation. |
 
 ---
 
-## Architecture
+## Interactive Demo
 
-- **Isolated Contexts**: Action dispatchers (`open`, `close`, `register`) are kept separate from slot rendering states. Invoking modal methods does not trigger re-renders in calling views.
-- **Concurrent Requests**: Multiple concurrent invocations of `open()` with identical payloads reuse the active pending promise. Invoking `open()` with new parameters supersedes prior pending promises.
+A runnable demo showcasing forms, wizards, drawers, and deep linking is available in the [`demo`](./demo) directory:
+
+```bash
+cd demo
+pnpm install
+pnpm dev
+```
 
 ---
 

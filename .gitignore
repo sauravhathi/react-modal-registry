@@ -3,3 +3,5 @@ dist
 *.tsbuildinfo
 .DS_Store
 .turbo
+demo
+test/*.complete.test.tsx
