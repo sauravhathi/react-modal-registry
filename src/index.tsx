@@ -142,6 +142,7 @@ interface ActiveModal {
   isOpen: boolean
   data: unknown
   invocationId: number
+  prevFocus?: HTMLElement | null
 }
 
 const DEFAULT_ROUTING = {
@@ -356,6 +357,8 @@ export function ModalProvider({
         }
       }
 
+      active.prevFocus?.focus()
+
       let didClose = false
       updateActiveModals(prev => {
         const current = prev.get(id)
@@ -422,9 +425,15 @@ export function ModalProvider({
 
       pendingRef.current.set(id, { promise, resolve: resolver, invocationId })
 
+      const prevFocus =
+        current?.prevFocus ??
+        (isBrowser() && document.activeElement instanceof HTMLElement && document.activeElement !== document.body
+          ? document.activeElement
+          : null)
+
       updateActiveModals(prev => {
         const next = new Map(prev)
-        next.set(id, { id, component: comp, isOpen: true, data, invocationId })
+        next.set(id, { id, component: comp, isOpen: true, data, invocationId, prevFocus })
         return next
       })
 
@@ -480,6 +489,13 @@ export function ModalProvider({
         }
         return changed ? next : prev
       })
+    }
+
+    for (const a of activeModalsRef.current.values()) {
+      if (a.isOpen && a.prevFocus) {
+        a.prevFocus.focus()
+        break
+      }
     }
 
     pendings.forEach(p => p.resolve(undefined))

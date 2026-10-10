@@ -384,4 +384,174 @@ describe('react-modal-registry (basic test suite)', () => {
       expect(window.location.hash).toBe('')
     })
   })
+
+  describe('Focus Restoration', () => {
+    it('restores focus to previously active element on page after modal closes', async () => {
+      let modalController!: ReturnType<typeof useModal>
+
+      function App() {
+        useRegisterModal('focusModal', TestModal)
+        modalController = useModal('focusModal')
+        return (
+          <div>
+            <input data-testid="page-input" />
+            <button data-testid="open-modal-btn" onClick={() => modalController.open()}>Open</button>
+          </div>
+        )
+      }
+
+      render(
+        <ModalProvider unmountDelay={0}>
+          <App />
+        </ModalProvider>
+      )
+
+      const input = screen.getByTestId('page-input')
+      input.focus()
+      expect(document.activeElement).toBe(input)
+
+      // Open modal while page-input has focus
+      act(() => {
+        modalController.open()
+      })
+      expect(screen.getByTestId('modal-open')).toBeDefined()
+
+      // Focus an element inside the open modal
+      const confirmBtn = screen.getByTestId('confirm-btn')
+      confirmBtn.focus()
+      expect(document.activeElement).toBe(confirmBtn)
+
+      // Close modal
+      act(() => {
+        modalController.close()
+      })
+
+      // Focus should be restored back to page-input
+      expect(document.activeElement).toBe(input)
+    })
+
+    it('restores focus correctly in stacked modals when closing sequentially', () => {
+      let modalA!: ReturnType<typeof useModal>
+      let modalB!: ReturnType<typeof useModal>
+
+      function ModalA({ isOpen }: ModalProps) {
+        if (!isOpen) return null
+        return (
+          <div data-testid="modal-a">
+            <button data-testid="modal-a-btn" onClick={() => modalB.open()}>
+              Open B
+            </button>
+          </div>
+        )
+      }
+
+      function ModalB({ isOpen }: ModalProps) {
+        if (!isOpen) return null
+        return (
+          <div data-testid="modal-b">
+            <button data-testid="modal-b-btn" onClick={() => modalB.close()}>
+              Close B
+            </button>
+          </div>
+        )
+      }
+
+      function App() {
+        useRegisterModal('modalA', ModalA)
+        useRegisterModal('modalB', ModalB)
+        modalA = useModal('modalA')
+        modalB = useModal('modalB')
+        return (
+          <div>
+            <input data-testid="page-input" />
+          </div>
+        )
+      }
+
+      render(
+        <ModalProvider unmountDelay={0}>
+          <App />
+        </ModalProvider>
+      )
+
+      const input = screen.getByTestId('page-input')
+      input.focus()
+      expect(document.activeElement).toBe(input)
+
+      // Open Modal A
+      act(() => {
+        modalA.open()
+      })
+      const modalABtn = screen.getByTestId('modal-a-btn')
+      modalABtn.focus()
+      expect(document.activeElement).toBe(modalABtn)
+
+      // Open Modal B from Modal A
+      act(() => {
+        modalB.open()
+      })
+      expect(screen.getByTestId('modal-b')).toBeDefined()
+
+      // Close Modal B
+      act(() => {
+        modalB.close()
+      })
+
+      // Focus should be restored to Modal A's button
+      expect(document.activeElement).toBe(modalABtn)
+
+      // Close Modal A
+      act(() => {
+        modalA.close()
+      })
+
+      // Focus should be restored to page-input
+      expect(document.activeElement).toBe(input)
+    })
+
+    it('restores focus to original page element when closeAll is called across multiple open modals', () => {
+      let modalA!: ReturnType<typeof useModal>
+      let modalB!: ReturnType<typeof useModal>
+      let closeAllFn!: () => void
+
+      function SimpleModal({ isOpen }: ModalProps) {
+        if (!isOpen) return null
+        return <div>Modal Content</div>
+      }
+
+      function App() {
+        useRegisterModal('modalA', SimpleModal)
+        useRegisterModal('modalB', SimpleModal)
+        modalA = useModal('modalA')
+        modalB = useModal('modalB')
+        closeAllFn = useCloseAll()
+        return (
+          <div>
+            <input data-testid="page-input" />
+          </div>
+        )
+      }
+
+      render(
+        <ModalProvider unmountDelay={0}>
+          <App />
+        </ModalProvider>
+      )
+
+      const input = screen.getByTestId('page-input')
+      input.focus()
+      expect(document.activeElement).toBe(input)
+
+      act(() => {
+        modalA.open()
+        modalB.open()
+      })
+
+      act(() => {
+        closeAllFn()
+      })
+
+      expect(document.activeElement).toBe(input)
+    })
+  })
 })

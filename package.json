@@ -1,6 +1,6 @@
 {
   "name": "react-modal-registry",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Type-safe modal registry and promise-based dialog manager for React",
   "keywords": [
     "react-modal",
