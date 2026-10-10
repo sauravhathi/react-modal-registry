@@ -14,6 +14,7 @@ Managing dialogs in React often leads to **modal sprawl**—scattering `useState
 - **Promise-Based Dialogs**: Open modals imperatively (`await modal.open()`) and await user responses inline without local boolean states.
 - **End-to-End Type Safety**: Autocomplete modal IDs, input payloads, and return values via TypeScript declaration merging.
 - **URL Deep-Linking**: Synchronize modal visibility with the URL hash (`#modal=<id>`) or query params with native browser Back button dismissal.
+- **Automatic Focus Restoration**: Tracks and restores focus back to the trigger element on the page upon modal dismissal, following WAI-ARIA accessibility standards.
 - **Zero Re-Render Penalty**: Split-context architecture ensures caller components never re-render when modals open or close.
 - **Headless & UI Agnostic**: Works out of the box with shadcn/ui, Radix UI, Tailwind CSS, or native HTML `<dialog>`.
 
